@@ -264,6 +264,37 @@ def compute_Lp_norm(x,p):
 		# TODO : change that to some thing more optimal : pb computation of the power several times
 		list_of_Lp += [L_r_x]
 	return(list_of_Lp)
+
+def sum_style_losses_simplerWay(sess, net, image_style):
+	"""
+	Compute the style term of the loss function with Gram Matrix from the
+	Gatys Paper
+	Input : 
+	- the tensforflow session sess
+	- the vgg19 net
+	- the dictionnary of Gram Matrices
+	- the dictionnary of the size of the image content through the net
+	Attention : Probleme si image de taille differentes !!! 
+	"""
+	# Info for the vgg19 
+	length_style_layers = float(len(style_layers))
+	weight_help_convergence = 10**(9) # This wight come from a paper of Gatys
+	# Because the function is pretty flat 
+	total_style_loss = 0
+	sess.run(net['input'].assign(image_style))
+	for layer, weight in style_layers:
+		# For one layer
+		x = net[layer]
+		a = sess.run(net[layer])
+		b,h,w,N = a.shape
+		M = tf.to_int32(h*w)
+		N = tf.to_int32(N)
+		A = gram_matrix(a,N,M)
+		G = gram_matrix(x,N,M) # Nota Bene : the Gram matrix is normalized by M
+		style_loss = tf.nn.l2_loss(tf.subtract(G,A))  # output = sum(t ** 2) / 2
+		style_loss *=  weight * weight_help_convergence  / (2.*(tf.to_float(N)**2)*length_style_layers)
+		total_style_loss += style_loss
+	return(total_style_loss)
 		
 def sum_style_stats_loss(sess,net,image_style,M_dict):
 	"""
@@ -1414,6 +1445,10 @@ def get_losses(args,sess, net, dict_features_repr,M_dict,image_style,dict_gram,p
 		style_loss =  sum_style_losses(sess, net, dict_gram,M_dict)
 		list_loss +=  [style_loss]
 		list_loss_name +=  ['style_loss']
+	if('textureLight'  in args.loss):
+		style_loss =  sum_style_losses_simplerWay(sess, net, image_style)
+		list_loss +=  [style_loss]
+		list_loss_name +=  ['style_loss']
 	if('4moments' in args.loss):
 		style_stats_loss = sum_style_stats_loss(sess,net,image_style,M_dict)
 		list_loss +=  [style_stats_loss]
@@ -1539,8 +1574,12 @@ def style_transfer(args):
 	
 	# Precomputation Phase :
 	
-	dict_gram = get_Gram_matrix_wrap(args,vgg_layers,image_style,pooling_type,padding)
-	dict_features_repr = get_features_repr_wrap(args,vgg_layers,image_content,pooling_type,padding)
+	if(not 'textureLight' in args.loss): 
+		dict_gram = get_Gram_matrix_wrap(args,vgg_layers,image_style,pooling_type,padding)
+		dict_features_repr = get_features_repr_wrap(args,vgg_layers,image_content,pooling_type,padding)
+	else:
+		dict_gram = None
+		dict_features_repr = None
 
 	net = net_preloaded(vgg_layers, image_content,pooling_type,padding) # The output image as the same size as the content one
 	

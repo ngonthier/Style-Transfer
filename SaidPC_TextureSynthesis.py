@@ -22,13 +22,13 @@ def do_mkdir(path):
 	return(0)
 
 def generation_Texture_LossFct():
-	path_origin = '../originBigger'
+	path_origin = '../originBigger/'
 	path_output = 'LossFct/results/'
 	do_mkdir(path_output)
 		
 	parser = get_parser_args()
-	max_iter = 2000
-	print_iter = 200
+	max_iter = 5000
+	print_iter = 500
 	start_from_noise = 1
 	init_noise_ratio = 1.0
 	optimizer = 'lbfgs'
@@ -38,8 +38,10 @@ def generation_Texture_LossFct():
 	vgg_name = 'normalizedvgg.mat'
 	n = 4
 	p = 4
-	losses_to_test = [['texture']]
-	
+	gpu_frac = 0 # Put 0 for memory growth
+	losses_to_test = [['autocorr']] # ['textureLight']
+	losses_to_test = [['textureLight']] # ['textureLight']
+
 	list_img = get_list_of_images(path_origin)
 	
 	for loss in losses_to_test:
@@ -53,7 +55,7 @@ def generation_Texture_LossFct():
 				img_output_folder=path_output,style_img_name=name_img_wt_ext,content_img_name=name_img_wt_ext,
 				init_noise_ratio=init_noise_ratio,start_from_noise=start_from_noise,output_img_name=output_img_name,
 				optimizer=optimizer,loss=loss,init=init,init_range=init_range,p=p,n=n,clipping_type=clipping_type,
-				vgg_name=vgg_name)
+				vgg_name=vgg_name,gpu_frac=gpu_frac)
 			args = parser.parse_args()
 			st.style_transfer(args)
 
